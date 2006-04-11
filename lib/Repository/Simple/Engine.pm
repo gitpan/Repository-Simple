@@ -1,0 +1,287 @@
+package Repository::Simple::Engine;
+
+use strict;
+use warnings;
+
+our $VERSION = '0.01';
+
+use Readonly;
+
+require Exporter;
+
+our @ISA = qw( Exporter );
+
+our @EXPORT_OK = qw( $NODE_EXISTS $PROPERTY_EXISTS $NOT_EXISTS );
+our %EXPORT_TAGS = ( exists_constants => \@EXPORT_OK );
+
+# Return values for path_exists()
+Readonly our $NODE_EXISTS     => 1;
+Readonly our $PROPERTY_EXISTS => 2;
+Readonly our $NOT_EXISTS      => 0;
+
+=head1 NAME
+
+Repository::Simple::Engine - Abstract base class for storage engines
+
+=head1 DESCRIPTION
+
+This documentation is meant for developers wishing to implement a content repository engine. If you just want to know how to use the repository API, L<Repository::Simple> is where you'll want to go.
+
+A developer may extend this class to provide a new storage engine. Each engine is simply an implementation of the bridge API specified here and requires only a single package. 
+
+To implement a content repository engine, create a subclass of L<Repository::Simple::Engine> that implements all the methods described in this documentation.
+
+  package Repository::Simple::Engine::MyCustom;
+
+  use strict;
+  use warnings;
+
+  use base qw( Repository::Simple::Engine );
+
+  sub new { ... }
+  sub node_type_named { ... }
+  sub property_type_named { ... }
+  sub path_exists { ... }
+  sub node_type_of { ... }
+  sub property_type_of { ... }
+  sub nodes_in { ... }
+  sub properties_in { ... }
+  sub get_scalar { ... }
+  sub get_handle { ... }
+
+=head1 METHODS
+
+Every storage engine must implement the following methods:
+
+=over
+
+=item $engine = Repository::Simple::Engine-E<gt>new(@args)
+
+This method constructs an instance of the engine. The arguments can be anything you want. The C<attach()> method of L<Repository::Simple> will pass the arguments directly to the new method upon creation. I.e.,
+
+  my $repository = Repository::Simple->attach(
+      MyEngine => qw( a b c )
+  );
+
+would effectively call:
+
+  Repository::Simple::Engine::MyEngine->new('a', 'b', 'c');
+
+This interface doesn't define anything specific regarding these arguments.
+
+This method must return an instance of the storage engine upon which all the other methods may be called.
+
+A basic default implementation is provided that simply treats all arguments given as a hash and blesses that hash into the class. Therefore, you can use the built-in implementation like this:
+
+  sub new {
+      my ($class, $some_arg) = @_;
+      
+      # Do some manipulations on $some_arg...
+
+      my $self = $class->SUPER::new( some_arg => $some_arg );
+
+      # Do some manipulations on $self
+      
+      return $self;
+  }
+
+=cut
+
+sub new {
+    my $class = shift;
+
+    return bless { @_ }, $class;
+}
+
+=item $exists = $engine-E<gt>path_exists($path)
+
+Returns information regarding whether a given path refers to a node, a property, or nothing. The method must return one of the following values:
+
+=over
+
+=item C<$NOT_EXISTS>
+
+There is no node or property at the given path, C<$path>.
+
+=item C<$NODE_EXISTS>
+
+There is a node at the given path, C<$path>.
+
+=item C<$PROPERTY_EXISTS>
+
+There is a property at the given path, C<$path>.
+
+=back
+
+These can be imported from the L<Repository::Simple::Engine> package:
+
+  use Repository::Simple::Engine qw( 
+      $NOT_EXISTS $NODE_EXISTS $PROPERTY_EXISTS 
+  );
+
+  # OR
+  use Repository::Simple::Engine qw( :exists_constants );
+
+This method must be implemented by subclasses. No implementation is provided.
+
+=cut
+
+sub path_exists {
+    die 'path_exists() must be implemented in subclass';
+}
+
+=item $node_type = $engine-E<gt>node_type_named($name)
+
+Given a node type name, this method returns an instance of L<Repository::Simple::Type::Node> for the matching node type or C<undef> if no node type by the given name exists.
+
+This method must be implemented by subclasses. No implementation is provided.
+
+=cut
+
+sub node_type_named {
+    die "node_type_named() must be implemented by subclass";
+}
+
+=item $property_type = $engine-E<gt>property_type_named($name)
+
+Given a property type name, this method returns an instance of L<Repository::Simple::Type::Property> for the matching property type or C<undef> if no property type by the given name exists.
+
+This method must be implemented by subclasses. No implementation is provided.
+
+=cut
+
+sub property_type_named {
+    die "property_type_named() must be implemented by subclass";
+}
+
+=item @names = $engine-E<gt>nodes_in($path)
+
+Given a path, this method should return all the child nodes of that path or an empty list if the node found has no children. If the given path itself does not exist, the method must die.
+
+The nodes should be returned as names relative to the given path.
+
+This method must be implemented by subclasses. No implementation is provided.
+
+=cut
+
+sub nodes_in {
+    die 'nodes_in() must be implemented by subclass';
+}
+
+=item @names = $engine-E<gt>properties_in($path)
+
+Given a path, this method should return all the child properties of the node at the given path or an empty list if the node found has no children. If the given path itself does not exist or does not refer to a node, the method must die.
+
+Properties must be returned as names relative to the given path.
+
+This method must be implemented by subclasses. No implementation is provided.
+
+=cut
+
+sub properties_in {
+    die 'properties_in() must be implemented by subclass';
+}
+
+=item $node_type = $engine-E<gt>node_type_of($path)
+
+Given a path, this method should return the L<Repository::Simple::Type::Node> object for the node at that path. If there is no node at that path, then the method must die.
+
+This method must be implemented by subclasses. No implementation is provided.
+
+=cut
+
+sub node_type_of {
+    die 'node_type_of() must be implemented by subclass';
+}
+
+=item $property_type = $engine-E<gt>property_type_of($path)
+
+Return the property type of the given class via a L<Repository::Simple::Type::Property> instance. If there is no property at that path, then the method must die.
+
+This method must be implemented by subclasses. No implementation is provided.
+
+=cut
+
+sub property_type_of {
+    die 'property_type_of() must be implemented by subclass';
+}
+
+=item $scalar = $engine-E<gt>get_scalar($path)
+
+Return the value of the property at the given path as a scalar value.
+
+This method must be implemented by subclasses. No implementation is provided.
+
+=cut
+
+sub get_scalar {
+    die 'get_scalar() must be implemented by subclass';
+}
+
+=item $handle = $engine-E<gt>get_handle($path, $mode)
+
+Return the value of the property at the given path as an IO handle, with the given mode, C<$mode>. The C<$mode> must be one of:
+
+=over
+
+=item * 
+
+"<"
+
+=item * 
+
+">"
+
+=item *
+
+">>"
+
+=item *
+
+"+<"
+
+=item *
+
+"+>"
+
+=item *
+
+"+>>"
+
+=back
+
+These have the same meaning as the Perl C<open()> built-in (i.e., read, write, append, read-write, write-read, append-read).
+
+This method must be implemented by subclasses. No implementation is provided.
+
+=cut
+
+sub get_handle {
+    die 'get_handle() must be implemented by subclass';
+}
+
+=back
+
+=head1 SEE ALSO
+
+L<Repository::Simple>
+
+=head1 AUTHOR
+
+Andrew Sterling Hanenkamp, E<lt>hanenkamp@cpan.orgE<gt>
+
+=head1 LICENSE AND COPYRIGHT
+
+Copyright 2006 Andrew Sterling Hanenkamp E<lt>hanenkamp@cpan.orgE<gt>.  All 
+Rights Reserved.
+
+This module is free software; you can redistribute it and/or modify it under
+the same terms as Perl itself. See L<perlartistic>.
+
+This program is distributed in the hope that it will be useful, but WITHOUT
+ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
+FOR A PARTICULAR PURPOSE.
+
+=cut
+
+1
