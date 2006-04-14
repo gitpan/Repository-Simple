@@ -2,10 +2,7 @@ Build.PL
 Changes
 ex/print_nodes.pl
 ex/print_type.pl
-lib/Repository/.Simple.pm.swp
 lib/Repository/Simple.pm
-lib/Repository/Simple/.Engine.pm.swp
-lib/Repository/Simple/.Value.pm.swp
 lib/Repository/Simple/Engine.pm
 lib/Repository/Simple/Engine/FileSystem.pm
 lib/Repository/Simple/Node.pm
